@@ -20,31 +20,65 @@ command 'product device list' do |c|
 end
 
 command 'product device enable' do |c|
-  c.syntax = %{mr product device enable [<sn>|--file <sns>]}
+  c.syntax = %{mr product device enable <sn>}
   c.summary = %{Enable a serial number; Creates device in Murano}
-  c.description = %{Enables serial numbers, creating the digial shadow in Murano.
+  c.description = %{Enables a serial number, creating the digial shadow in Murano.
 
 NOTE: This opens the 24 hour activation window.  If the device does not make
 the activation call within this time, it will need to be enabled again.
   }
-  c.option '-f', '--file FILE', %{A file of serial numbers, one per line}
+  c.option '--name NAME', String, %{A name for this device.}
 
   c.action do |args,options|
     prd = MrMurano::Product.new
-    if options.file then
-      File.open(options.file) do |io|
-        io.each_line do |line|
-          line.strip!
-          prd.enable(line) unless line.empty?
-        end
+    pod = MrMurano::Product1PDevice.new
+    if args.count > 0 then
+      res = prd.enable(args[0])
+      if res[:rid] then
+        name = options.name
+        name = args[0] unless options.name
+        pp pod.rename(args[0], name, res[:rid])
       end
-    elsif args.count > 0 then
-      prd.enable(args[0])
     else
       prd.error "Missing a serial number to enable"
     end
   end
 end
+
+command 'product device batchenable' do |c|
+  c.syntax = %{mr product device batchenable <file of identifiers>]}
+  c.summary = %{Enable devices; Creates devices in Murano}
+  c.description = %{Enables serial numbers, creating the digial shadow in Murano.
+
+NOTE: This opens the 24 hour activation window.  If the device does not make
+the activation call within this time, it will need to be enabled again.
+  }
+
+  c.action do |args,options|
+    prd = MrMurano::Product.new
+    pod = MrMurano::Product1PDevice.new
+    fname = args.shift
+    if fname.nil? then
+      prd.error "Missing identifiers file"
+    else
+      File.open(fname) do |io|
+        io.each_line do |line|
+          line.strip!
+          unless line.empty? then
+            snid, name = line.split(',')
+            snid.strip!
+            name = snid unless name.nil?
+            res = prd.enable(snid)
+            if res[:rid] then
+              pod.rename(snid, name, res[:rid])
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
 
 command 'product device activate' do |c|
   c.syntax = %{mr product device activate <sn>}
