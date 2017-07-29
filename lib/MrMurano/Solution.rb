@@ -48,7 +48,7 @@ module MrMurano
   class Solution < SolutionBase
     def initialize
       # Code path for `murano domain`.
-      @solntype = 'product.id'
+      @solntype = 'application.id'
       super
     end
 
